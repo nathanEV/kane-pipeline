@@ -7,8 +7,7 @@ from urllib.parse import urlparse
 import os
 
 
-
-API_KEY = "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"
+API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 
 MODEL = "google/gemini-2.0-flash-001"
 
