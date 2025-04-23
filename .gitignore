@@ -1,0 +1,83 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.env
+*.egg-info/
+.eggs/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Local configuration
+instance/
+.webassets-cache
+
+# Credentials
+service_account.json
+credentials.json
+*.pem
+*.key
+
+# Package directories (installed packages)
+urllib3*/
+uritemplate*/
+six*/
+sgmllib3k*/
+rsa*/
+requests*/
+pytz*/
+python_dateutil*/
+pyparsing*/
+pyasn1*/
+proto*/
+pip*/
+oauthlib*/
+idna*/
+httplib2*/
+google*/
+googleapis*/
+feedparser*/
+dateutil*/
+charset_normalizer*/
+certifi*/
+cachetools*/
+apiclient*/
+
+# External library files in root directory
+/six.py
+/sgmllib.py
+/google_auth_httplib2.py
+
+# Lambda package
+kane_lambda_package.zip 
