@@ -53,6 +53,9 @@ def format_date(published_struct):
         parsed = datetime(*published_struct[:6], tzinfo=timezone.utc)
     except Exception:
         parsed = datetime.now(timezone.utc)
+    
+    # Format as MM/DD/YYYY, not as Excel serial number
+    # This ensures consistency with the clean_sheets function
     return parsed.strftime("%m/%d/%Y")
 
 def extract_real_url(summary: str) -> str:

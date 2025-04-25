@@ -5,6 +5,7 @@ import pytz
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from dateutil import parser as date_parser
+import re
 
 # === CONFIG ===
 CREDS_FILE = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "service_account.json"))
@@ -44,10 +45,25 @@ def newsletter_already_exists(service, doc_id, title_text):
 
 def parse_date_safe(date_str):
     try:
-        if not date_str.strip():
+        if not date_str or not date_str.strip():
             return None
+            
+        # Try to handle Excel/Google Sheets date serial numbers
+        if re.match(r'^\d{5}$', str(date_str).strip()):
+            try:
+                # Convert Excel/Google Sheets date serial to datetime
+                # Excel dates start from December 30, 1899
+                excel_epoch = datetime(1899, 12, 30, tzinfo=pytz.UTC)
+                days_since_epoch = int(date_str)
+                dt = excel_epoch + timedelta(days=days_since_epoch)
+                print(f"✅ Converted date serial {date_str} to {dt}")
+                return dt
+            except Exception as e:
+                print(f"⚠️ Failed to convert date serial: '{date_str}' → {e}")
+        
+        # Regular date parsing
         dt = date_parser.parse(date_str)
-        return dt.replace(tzinfo=pytz.UTC)
+        return dt.astimezone(pytz.UTC) if dt.tzinfo else dt.replace(tzinfo=pytz.UTC)
     except Exception as e:
         print(f"⚠️ Failed to parse date: '{date_str}' → {e}")
         return None
@@ -67,7 +83,12 @@ def filter_recent_stories(stories):
             skipped += 1
             continue
 
-        if pub_date >= cutoff:
+        # Check if date is in the future - always keep future dates
+        if pub_date > now_utc:
+            print(f"✅ Keeping future article dated {pub_date}")
+            recent_stories.append(s)
+        # Otherwise apply the normal 1-day cutoff rule
+        elif pub_date >= cutoff:
             recent_stories.append(s)
         else:
             print(f"⏭️ Skipping old article dated {pub_date} (cutoff {cutoff})")

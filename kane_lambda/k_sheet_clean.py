@@ -4,6 +4,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from dateutil import parser as date_parser
 import os
+import re
 
 # === CONFIG ===
 CREDS_FILE = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "service_account.json"))
@@ -16,6 +17,21 @@ def parse_date_safe(date_str):
     try:
         if not date_str or not date_str.strip():
             return None
+            
+        # Try to handle Excel/Google Sheets date serial numbers
+        if re.match(r'^\d{5}$', str(date_str).strip()):
+            try:
+                # Convert Excel/Google Sheets date serial to datetime
+                # Excel dates start from December 30, 1899
+                excel_epoch = datetime(1899, 12, 30, tzinfo=pytz.UTC)
+                days_since_epoch = int(date_str)
+                dt = excel_epoch + timedelta(days=days_since_epoch)
+                print(f"✅ Converted date serial {date_str} to {dt}")
+                return dt
+            except Exception as e:
+                print(f"⚠️ Failed to convert date serial: '{date_str}' → {e}")
+        
+        # Regular date parsing
         dt = date_parser.parse(date_str)
         return dt.astimezone(pytz.UTC) if dt.tzinfo else dt.replace(tzinfo=pytz.UTC)
     except Exception as e:
@@ -62,9 +78,25 @@ def write_sheet(service, sheet_name, headers, rows):
 
 def should_keep(row):
     pub_date = parse_date_safe(row.get("publication_date", ""))
+    # Debug print for dates
+    if pub_date:
+        print(f"📅 Story ID: {row.get('story_id', 'unknown')}, Date: {pub_date}, Keeping: {pub_date >= datetime.now(pytz.UTC) - timedelta(days=7)}")
+    
     if not pub_date or pub_date < datetime.now(pytz.UTC) - timedelta(days=7):
         return False
-    score = int(row.get("significance_score", "0") or 0)
+    
+    # Check for significance score with more flexible parsing
+    score_str = row.get("significance_score", "0")
+    if not score_str or score_str.strip() == "":
+        score_str = "0"
+    try:
+        score = int(score_str)
+    except (ValueError, TypeError):
+        try:
+            score = float(score_str)
+        except (ValueError, TypeError):
+            score = 0
+    
     return score >= 3
 
 def clean_sheets():
