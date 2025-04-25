@@ -1,33 +1,24 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
-# Create a temporary directory for packaging
-rm -rf /tmp/lambda_package
-mkdir -p /tmp/lambda_package
+# 1) Prep build area
+cd lambda_package
+rm -rf build
+mkdir -p build/python
+mkdir -p build/kane_lambda
 
-# Install dependencies into the package root
-python3 -m pip install -r requirements.txt --target /tmp/lambda_package/ --upgrade
+# 2) Install all requirements into build/python
+git_root=$(dirname "$BASH_SOURCE")
+python3 -m pip install -r ../requirements.txt --target build/python --upgrade
 
-# Create the kane_lambda directory inside the package
-mkdir -p /tmp/lambda_package/kane_lambda
+# 3) Copy our code & creds
+cp -r ../kane_lambda/* build/kane_lambda/
+cp ../kane_lambda/__init__.py build/kane_lambda/
+cp service_account.json build/
 
-# Copy the kane_lambda files to the package/kane_lambda directory
-cp -r kane_lambda/* /tmp/lambda_package/kane_lambda/
-cp kane_lambda/__init__.py /tmp/lambda_package/kane_lambda/
+# 4) Zip it up
+cd build
+zip -r9 ../kane_lambda_package.zip .
+cd ..
 
-# Copy service account credentials
-cp service_account.json /tmp/lambda_package/
-
-# Navigate to the package directory
-cd /tmp/lambda_package
-
-# Create the zip file
-zip -r9 /tmp/kane_lambda_package.zip .
-
-# Return to the original directory
-cd -
-
-# Copy the zip file to the current directory
-cp /tmp/kane_lambda_package.zip ./kane_lambda_package.zip
-
-echo "Package created at kane_lambda_package.zip" 
+echo "✅ Built lambda_package/kane_lambda_package.zip" 

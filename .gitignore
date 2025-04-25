@@ -80,4 +80,8 @@ apiclient*/
 /google_auth_httplib2.py
 
 # Lambda package
-kane_lambda_package.zip 
+kane_lambda_package.zip
+
+# Lambda build artifacts and legacy copies
+/lambda_package/build/
+/lambda_package/kane_lambda/ 
