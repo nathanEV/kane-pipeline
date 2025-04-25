@@ -5,6 +5,8 @@ from googleapiclient.discovery import build
 import re
 from urllib.parse import urlparse
 import os
+from dateutil import parser as date_parser
+import pytz
 
 
 API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
@@ -16,8 +18,16 @@ INPUT_SHEET_NAME = "headscanner"
 OUTPUT_SHEET_NAME = "prioritizer"  
 CREDS_FILE = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "service_account.json"))
 OUTPUT_HEADERS = [
-    "story_id", "author", "publication_date", "source", 
-    "FactSummary", "sourceURL", "category", "significance_score", "HumanPriority"
+    "story_id",
+    "author",
+    "headline",
+    "fact_summary",
+    "source_url",
+    "source_name",
+    "publication_date",
+    "category",
+    "significance_score",
+    "human_priority",
 ]
 
 
@@ -152,16 +162,26 @@ def process_story_batch(story_batch, batch_size=5):
             if original:
                 source_url = original.get("source", "")
                 readable_source = parse_source_from_url(source_url)
+                # Normalize publication_date to YYYY-MM-DD UTC
+                raw_pub = original.get("publication_date", "")
+                try:
+                    dt = date_parser.parse(raw_pub)
+                    dt_utc = dt.astimezone(pytz.UTC) if dt.tzinfo else dt.replace(tzinfo=pytz.UTC)
+                    pub_date_str = dt_utc.strftime("%Y-%m-%d")
+                except Exception:
+                    pub_date_str = raw_pub
+
                 results.append({
                     "story_id": sid,
-                    "Author": original.get("author", ""),
-                    "Date": original.get("publication_date", ""),
-                    "Source": readable_source,
-                    "FactSummary": result.get("fact_summary", ""),
-                    "SourceURL": source_url,
-                    "Category": result.get("category", ""),
-                    "SignificanceScore": result.get("significance_score", ""),
-                    "HumanPriority": original.get("HumanPriority", 0),
+                    "author": original.get("author", ""),
+                    "headline": original.get("headline", ""),
+                    "fact_summary": result.get("fact_summary", ""),
+                    "source_url": source_url,
+                    "source_name": readable_source,
+                    "publication_date": pub_date_str,
+                    "category": result.get("category", ""),
+                    "significance_score": result.get("significance_score", ""),
+                    "human_priority": original.get("HumanPriority", 0),
                 })
     return results
 
@@ -175,14 +195,15 @@ def write_results_to_sheet(spreadsheet_id, sheet_name, results, creds_file):
     for row in results:
         values.append([
             row.get("story_id", ""),
-            row.get("Author", ""),
-            row.get("Date", ""),
-            row.get("Source", ""),
-            row.get("FactSummary", ""),
-            row.get("SourceURL", ""),
-            row.get("Category", ""),
-            row.get("SignificanceScore", ""),
-            row.get("HumanPriority", "")
+            row.get("author", ""),
+            row.get("headline", ""),
+            row.get("fact_summary", ""),
+            row.get("source_url", ""),
+            row.get("source_name", ""),
+            row.get("publication_date", ""),
+            row.get("category", ""),
+            row.get("significance_score", ""),
+            row.get("human_priority", "")
         ])
 
     if not values:
