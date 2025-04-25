@@ -65,35 +65,10 @@ def read_stories_from_sheet(spreadsheet_id, sheet_name, creds_file):
 
 def build_prompt(story_batch):
     return f"""
-You are a News Analysis Agent. For each story object in the following JSON list, perform the following three steps:
-
-1. Write a 1-sentence **factual summary** (10–40 words). Use specific numbers, names, and data where available. Do not editorialize.
-2. Choose a single **category** from the list below:
-3. Assign a **significance_score** from 1 (low) to 10 (high) using the detailed editorial criteria.Be generous in assigning scores of 9–10 for stories with clear importance to AI, enterprise tech, investment trends, geopolitics, or strategic impact.
-
-### Categories:
-- **Product & Research**: Major launches, updates, project results, or benchmarks from significant AI/ML efforts.
-- **Deals & Partnerships**: Strategic alliances, collaborations, or joint ventures.
-- **M&A**: Mergers, acquisitions, or notable talent acquisitions.
-- **Funding**: Significant venture rounds, growth rounds, or grants.
-- **Market Pulse**: Major stock moves (include tickers), analyst upgrades/downgrades, or sector signals.
-- **Chips & Infrastructure**: Semiconductor advances, data center builds, power/energy systems relevant to AI.
-- **Policy & Geopolitics**: Regulation, government statements, export controls, privacy rulings, industrial policy.
-- **People Moves**: Notable hires/departures (e.g. C-suite, prominent researchers) that imply strategy shifts.
-- **From the Calls**: AI insights from public earnings calls or investor day presentations.
-- **Look Ahead**: Confirmed upcoming events, launches, deadlines, or earnings within the next 2 weeks.
-
-### Significance Criteria Highlights:
-- **Funding**: >$250M in AI/Robotics, or $50M–$250M if strategic (semis, models, novel tech).
-- **Product/Research**: SOTA, capability jumps, cost/licensing impacts from major players.
-- **Deals**: Structural market implications, pricing/access changes, strategic innovation.
-- **M&A**: >$1B value or meaningful talent acquisition.
-- **Infra/Geo**: Fabs, compute power, policy moves, export controls, industrial strategy.
-- **People Moves**: Only if C-level, strategy-indicating, or highly influential (e.g. H-index, past roles).
-- **Human Priority**: If HumanPriority is 1 it means a human has flagged it as important so reflect in the Significane Criteria.
-
-### Format:
-Return a JSON list like this:
+Role: AI Content Curator for "The One AI Email".
+Audience: Senior Execs, Investors (Public & VC). Focus strictly on AI, Semiconductors, Enterprise Software, Cloud Infra, related Energy (data centers/tech demand), Capital Markets ($50M+ deals, M&A, IPOs, major AI/Tech stock moves), and specific AI/Tech Policy/Geopolitics.
+Task: Process input "fact records". Filter ruthlessly based on audience relevance; exclude general news, minor updates, consumer reviews, etc. If unsure, exclude.
+Output: Return a JSON list like this:
 [
   {{
     "story_id": "123",
@@ -104,9 +79,19 @@ Return a JSON list like this:
   ...
 ]
 
-### Input:
+Field Generation Rules:
+Category: Assign ONE category based on primary focus using this priority: [M&A, Funding, Policy & Geopolitics, Chips & Infrastructure, Market Pulse, Product & Research, Deals & Partnerships, People Moves, From the Calls, Look Ahead].
+fact_summary: 25-35 words, neutral, factual summary of brief_factual_sentence. Include key numbers/metrics. Include ticker only if explicit or one of: (MSFT, GOOGL, AAPL, AMZN, NVDA, META, TSLA, TSM, INTC, AMD). End with "(Source: [source_name])". No markdown.
+significance_score: Integer 1-10 based on importance to audience. Assess Relevance (Core AI/Tech focus?) & Scale/Impact (Major players/funds/policy?).
+Not Relevant: 1-2
+Relevant & Low Impact: 3-4
+Relevant & Medium Impact: 5-7
+Relevant & High Impact: 8-10
+
+Input:
 {json.dumps(story_batch, indent=2)}
 """
+
 def call_openrouter(prompt):
     headers = {
         "Authorization": f"Bearer {API_KEY}",
