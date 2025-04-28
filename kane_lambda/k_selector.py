@@ -6,6 +6,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from dateutil import parser as date_parser
 import re
+from kane_lambda.config import ENABLE_K_SELECTOR
 
 # === CONFIG ===
 CREDS_FILE = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "service_account.json"))
@@ -14,16 +15,11 @@ INPUT_SHEET = "prioritizer"  # Prioritized stories
 EXISTING_DOC_ID = "1aTV78mQpel4ihw5slFKn_iBR5fcvF1H1_boQl72GLBg"  # 🔁 Replace with your doc ID
 
 CATEGORY_ORDER = [
-    "Market Pulse",
-    "Product & Research",
-    "Funding",
-    "Policy & Geopolitics",
-    "Deals & Partnerships",
-    "M&A",
-    "Chips & Infrastructure",
-    "People Moves",
-    "From the Calls",
-    "Look Ahead"
+    "Product_Research",
+    "Capital_Corporate_Moves",
+    "Infrastructure_Supply",
+    "Market_Financial_Signals",
+    "Policy_Geopolitics"
 ]
 
 # === FUNCTIONS ===
@@ -175,7 +171,7 @@ def insert_formatted_content(service, doc_id, grouped):
         bullet_start = index
 
         for story in stories:
-            text = f"{story['FactSummary'].strip()}\n"
+            text = f"{story.get('fact_summary', '').strip()}\n"
             requests.append({
                 "insertText": {"location": {"index": index}, "text": text}
             })
@@ -222,7 +218,8 @@ def build_html_email_body(grouped_stories):
 
         html += f'<h2 style="font-size:14px; font-weight:bold; margin-top:20px;">{category}</h2><ul>'
         for story in stories:
-            html += f'<li style="font-size:11x; margin-bottom:8px;">{story["FactSummary"].strip()}</li>'
+            summary = story.get('fact_summary', '').strip()
+            html += f'<li style="font-size:11px; margin-bottom:8px;">{summary}</li>'
         html += "</ul>"
 
     html += "</div>"
@@ -255,3 +252,9 @@ def run_selector():
     else:
         insert_formatted_content(doc_service, EXISTING_DOC_ID, grouped_stories)
         print(f"✅ Draft appended successfully: https://docs.google.com/document/d/{EXISTING_DOC_ID}/edit")
+
+if __name__ == "__main__":
+    if not ENABLE_K_SELECTOR:
+        print("⚠️ k_selector disabled by config")
+    else:
+        run_selector()

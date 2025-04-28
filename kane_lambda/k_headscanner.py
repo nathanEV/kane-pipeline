@@ -23,17 +23,23 @@ INPUT_SHEET_NAME = "headscanner"
 CREDS_FILE = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "service_account.json"))
 
 HEADERS = [
-    "story_id", "author", "headline", "context_snippet", "source", "publication_date", "HumanPriority"
+    "story_id",
+    "author",
+    "headline",
+    "context_snippet",
+    "source_url",
+    "publication_date",
+    "human_priority",
 ]
 
 RSS_FEEDS = [
     ("https://www.techmeme.com/feed.xml", "Techmeme River"),
     ("https://rss.app/feeds/4uZTg1jssusYbBdz.xml", "Techmeme Semiconductor"),
-    ("https://rss.app/feeds/YequPHCkaGrGVmQ3.xml", "Techmeme AI"),
-    ("https://rss.app/feeds/A3Ek6oyP5srVOg7B.xml", "Techmeme DataCent"),
-    ("https://rss.app/feeds/26kTeCIdIu0cvwyI.xml", "Techmeme OpenAI/Lambda/Google"),
-    ("https://rss.app/feeds/i8zAyXxBC2npVZ8O.xml", "Techmeme Apple/Amazon/Anthropic"),
-    ("https://rss.app/feeds/C7ZjIwPhABfVseOE.xml", "Techmeme Alibaba/Deepseek/Tencent/China"),
+    ("https://rss.app/feeds/unnX4o3PFEpblbx4.xml", "Techmeme AI"),
+    ("https://rss.app/feeds/HLekB8mvrvIxQ4pS.xml", "Techmeme DataCent"),
+    ("https://rss.app/feeds/H4qnuCkcvceXwJBE.xml", "Techmeme OpenAI/Lambda/Google"),
+    ("https://rss.app/feeds/e3y2n9NIz8By1H4h.xml", "Techmeme Apple/Amazon/Anthropic"),
+    ("https://rss.app/feeds/tWJEPf9NQjIJXENk.xml", "Techmeme Alibaba/Deepseek/Tencent/China"),
     ("https://www.techinasia.com/feed", "Tech in Asia"),
     ("https://www.scmp.com/rss/91/feed", "SCMP Technology"),
     ("https://www.datacenterdynamics.com/en/rss/", "DatacenterDynamics"),
@@ -56,7 +62,7 @@ def format_date(published_struct):
     
     # Format as MM/DD/YYYY, not as Excel serial number
     # This ensures consistency with the clean_sheets function
-    return parsed.strftime("%m/%d/%Y")
+    return parsed.strftime("%Y-%m-%d")
 
 def extract_real_url(summary: str) -> str:
     summary = unescape(summary)
@@ -176,9 +182,9 @@ def append_stories_to_sheet(spreadsheet_id, sheet_name, stories, creds_file):
             s["author"],
             s["headline"],
             s["context_snippet"],
-            s["source"],
-            str(s["publication_date"]),
-            s.get("HumanPriority", 0)
+            s.get("source_url", ""),
+            s.get("publication_date", ""),
+            s.get("human_priority", 0)
         ])
 
     if not values:
@@ -279,9 +285,9 @@ def run_headscanner(max_stories):
             "author": final_author,
             "headline": headlines[i],
             "context_snippet": snippet,
-            "source": candidates[i]["source"],
+            "source_url": candidates[i]["source"],
             "publication_date": candidates[i]["publication_date"],
-            "HumanPriority": 0
+            "human_priority": 0
         })
         print(f"✅ Added: {headlines[i][:60]}...")
         next_id += 1

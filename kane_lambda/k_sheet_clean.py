@@ -5,6 +5,8 @@ from googleapiclient.discovery import build
 from dateutil import parser as date_parser
 import os
 import re
+# Import feature toggle
+from kane_lambda.config import ENABLE_K_SHEET_CLEAN
 
 # === CONFIG ===
 CREDS_FILE = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "service_account.json"))
@@ -144,4 +146,7 @@ def clean_sheets():
     print("✅ Cleaned & normalized both sheets without duplicates.")
 
 if __name__ == "__main__":
-    clean_sheets()
+    if not ENABLE_K_SHEET_CLEAN:
+        print("⚠️ k_sheet_clean disabled by config")
+    else:
+        clean_sheets()

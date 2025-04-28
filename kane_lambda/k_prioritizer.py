@@ -8,6 +8,8 @@ import os
 from dateutil import parser as date_parser
 import pytz
 
+# Config-driven constants
+from kane_lambda.config import CATEGORIES, PROMPT_TEMPLATE
 
 API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 
@@ -26,16 +28,9 @@ OUTPUT_HEADERS = [
     "source_name",
     "publication_date",
     "category",
+    "category_reason",
     "significance_score",
     "human_priority",
-]
-
-
-
-CATEGORIES = [
-    "Product & Research", "Deals & Partnerships", "M&A", "Funding", 
-    "Market Pulse", "Chips & Infrastructure", "Policy & Geopolitics", 
-    "People Moves", "From the Calls", "Look Ahead"
 ]
 
 def read_stories_from_sheet(spreadsheet_id, sheet_name, creds_file):
@@ -66,41 +61,16 @@ def read_stories_from_sheet(spreadsheet_id, sheet_name, creds_file):
             "author": story.get("author", ""),
             "headline": story.get("headline", ""),
             "context_snippet": story.get("context_snippet", ""),
-            "source": story.get("source", ""),
+            "source_url": story.get("source_url", ""),
             "publication_date": story.get("publication_date", ""),
-            "HumanPriority": int(story.get("HumanPriority", "0") or 0)
+            "human_priority": int(story.get("human_priority", "0") or 0)
         })  
 
     return story_batch
 
 def build_prompt(story_batch):
-    return f"""
-Role: AI Content Curator for "The One AI Email".
-Audience: Senior Execs, Investors (Public & VC). Focus strictly on AI, Semiconductors, Enterprise Software, Cloud Infra, related Energy (data centers/tech demand), Capital Markets ($50M+ deals, M&A, IPOs, major AI/Tech stock moves), and specific AI/Tech Policy/Geopolitics.
-Task: Process input "fact records". Filter ruthlessly based on audience relevance; exclude general news, minor updates, consumer reviews, etc. If unsure, exclude.
-Output: Return a JSON list like this:
-[
-  {{
-    "story_id": "123",
-    "fact_summary": "...",
-    "category": "M&A",
-    "significance_score": 7
-  }},
-  ...
-]
-
-Field Generation Rules:
-Category: Assign ONE category based on primary focus using this priority: [M&A, Funding, Policy & Geopolitics, Chips & Infrastructure, Market Pulse, Product & Research, Deals & Partnerships, People Moves, From the Calls, Look Ahead].
-fact_summary: 25-35 words, neutral, factual summary of brief_factual_sentence. Include key numbers/metrics. Include ticker only if explicit or one of: (MSFT, GOOGL, AAPL, AMZN, NVDA, META, TSLA, TSM, INTC, AMD). End with "(Source: [source_name])". No markdown.
-significance_score: Integer 1-10 based on importance to audience. Assess Relevance (Core AI/Tech focus?) & Scale/Impact (Major players/funds/policy?).
-Not Relevant: 1-2
-Relevant & Low Impact: 3-4
-Relevant & Medium Impact: 5-7
-Relevant & High Impact: 8-10
-
-Input:
-{json.dumps(story_batch, indent=2)}
-"""
+    # Inject the serialized story_batch into the PROMPT_TEMPLATE
+    return PROMPT_TEMPLATE.replace("{story_batch}", json.dumps(story_batch, indent=2))
 
 def call_openrouter(prompt):
     headers = {
@@ -160,7 +130,7 @@ def process_story_batch(story_batch, batch_size=5):
             sid = result.get("story_id")
             original = next((item for item in batch if item["story_id"] == sid), None)
             if original:
-                source_url = original.get("source", "")
+                source_url = original.get("source_url", "")
                 readable_source = parse_source_from_url(source_url)
                 # Normalize publication_date to YYYY-MM-DD UTC
                 raw_pub = original.get("publication_date", "")
@@ -180,8 +150,9 @@ def process_story_batch(story_batch, batch_size=5):
                     "source_name": readable_source,
                     "publication_date": pub_date_str,
                     "category": result.get("category", ""),
+                    "category_reason": result.get("category_reason", ""),
                     "significance_score": result.get("significance_score", ""),
-                    "human_priority": original.get("HumanPriority", 0),
+                    "human_priority": original.get("human_priority", 0),
                 })
     return results
 
@@ -196,12 +167,13 @@ def write_results_to_sheet(spreadsheet_id, sheet_name, results, creds_file):
         values.append([
             row.get("story_id", ""),
             row.get("author", ""),
+            row.get("publication_date", ""),
             row.get("headline", ""),
+            row.get("source_name", ""),
             row.get("fact_summary", ""),
             row.get("source_url", ""),
-            row.get("source_name", ""),
-            row.get("publication_date", ""),
             row.get("category", ""),
+            row.get("category_reason", ""),
             row.get("significance_score", ""),
             row.get("human_priority", "")
         ])
