@@ -16,8 +16,9 @@ echo "Building dependencies inside Docker container for Linux compatibility..."
 docker run --rm \
   -v "$(pwd)/..":/var/task \
   -w /var/task/lambda_package \
+  --entrypoint bash \
   public.ecr.aws/lambda/python:3.12 \
-  bash -c "pip install -r ../requirements.txt --target build/python --upgrade"
+  -c "pip install -r ../requirements.txt --target build/python --upgrade"
 
 # If dependencies installed into a python/ dir, move them to root
 if [ -d build/python ]; then
