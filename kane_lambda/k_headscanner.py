@@ -12,7 +12,8 @@ from urllib.parse import urlparse
 from html import unescape
 import math
 import os
-from kane_lambda.config import HEADSCANNER_MODEL, HEADSCANNER_PROMPT_TEMPLATE
+from kane_lambda.config import HEADSCANNER_MODEL, HEADSCANNER_PROMPT_TEMPLATE, LLM_BACKEND, GEMINI_API_KEY
+from google import genai
 
 # === CONFIG ===
 API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
@@ -91,6 +92,23 @@ def extract_snippet_author_batch(summaries, headlines, known_authors=None, batch
     if known_authors is None:
         known_authors = [""] * len(summaries)
 
+    def call_llm(prompt, model):
+        if LLM_BACKEND == "openrouter":
+            headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+            payload = {"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": 0.3}
+            resp = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+            try:
+                resp.raise_for_status()
+            except requests.exceptions.HTTPError as e:
+                raise
+            return resp.json()["choices"][0]["message"]["content"].strip()
+        elif LLM_BACKEND == "gemini":
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            response = client.models.generate_content(model=model, contents=prompt)
+            return response.text
+        else:
+            raise ValueError(f"Unknown LLM_BACKEND: {LLM_BACKEND}")
+
     results = []
     for i in range(0, len(summaries), batch_size):
         batch = [
@@ -104,23 +122,14 @@ def extract_snippet_author_batch(summaries, headlines, known_authors=None, batch
 
         prompt = HEADSCANNER_PROMPT_TEMPLATE.replace("{batch}", json.dumps(batch, indent=2))
 
-        headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
-        payload = {
-            "model": HEADSCANNER_MODEL,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.3,
-        }
-
         try:
-            response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
-            response.raise_for_status()
-            content = response.json()["choices"][0]["message"]["content"].strip()
+            content = call_llm(prompt, HEADSCANNER_MODEL)
 
             # 🧹 Strip markdown/code blocks and noise
             content = re.sub(r"^```(?:json)?\s*", "", content)
             content = re.sub(r"\s*```$", "", content)
             content = re.sub(r'^[^{\[]+', '', content).strip()  # Remove leading junk
-            content = content.replace(""", "\"").replace(""", "\"").replace("'", "'").replace("'", "'")
+            content = content.replace('"', '"').replace("'", "'").replace("'", "'")
 
             # 🔍 Attempt JSON parse
             parsed = json.loads(content)
@@ -141,9 +150,6 @@ def extract_snippet_author_batch(summaries, headlines, known_authors=None, batch
             try:
                 print("🔍 Model:", HEADSCANNER_MODEL)
                 print("🔍 Prompt to model:\n", prompt)
-                print("🔍 Request payload:", json.dumps(payload))
-                print("🔍 Response status:", response.status_code)
-                print("🔍 Response body:", response.text)
             except Exception:
                 pass
             print("🔎 Raw response snippet:\n", content[:300])

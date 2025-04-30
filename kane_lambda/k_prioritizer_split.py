@@ -7,6 +7,7 @@ from googleapiclient.discovery import build
 from urllib.parse import urlparse
 from dateutil import parser as date_parser
 import pytz
+from google import genai
 
 from kane_lambda.config import (
     CATEGORY_MODEL,
@@ -14,7 +15,9 @@ from kane_lambda.config import (
     RELEVANCE_MODEL,
     CATEGORY_PROMPT_TEMPLATE,
     SIGNIFICANCE_PROMPT_TEMPLATE,
-    RELEVANCE_PROMPT_TEMPLATE
+    RELEVANCE_PROMPT_TEMPLATE,
+    LLM_BACKEND,
+    GEMINI_API_KEY
 )
 from kane_lambda.k_prioritizer import (
     SHEET_ID,
@@ -68,31 +71,38 @@ def get_processed_story_ids(spreadsheet_id, sheet_name, creds_file):
     values = result.get('values', [])
     return {row[0] for row in values if row}
 
-def call_model(prompt, model):
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.2
-    }
-    response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers=headers,
-        json=payload
-    )
-    try:
-        response.raise_for_status()
-    except requests.exceptions.HTTPError as e:
-        print("❌ Model request HTTPError:", e)
-        print("🔍 Model:", model)
-        print("🔍 Request payload:", json.dumps(payload))
-        print("🔍 Response status:", response.status_code)
-        print("🔍 Response body:", response.text)
-        raise
-    return response.json()["choices"][0]["message"]["content"]
+def call_llm(prompt, model):
+    if LLM_BACKEND == "openrouter":
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.2
+        }
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            json=payload
+        )
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            print("❌ Model request HTTPError:", e)
+            print("🔍 Model:", model)
+            print("🔍 Request payload:", json.dumps(payload))
+            print("🔍 Response status:", response.status_code)
+            print("🔍 Response body:", response.text)
+            raise
+        return response.json()["choices"][0]["message"]["content"]
+    elif LLM_BACKEND == "gemini":
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        response = client.models.generate_content(model=model, contents=prompt)
+        return response.text
+    else:
+        raise ValueError(f"Unknown LLM_BACKEND: {LLM_BACKEND}")
 
 def parse_source_from_url(url):
     try:
@@ -110,7 +120,7 @@ def process_story_batch_split(story_batch, batch_size=5):
 
         # First prompt: category & reason
         cat_prompt = CATEGORY_PROMPT_TEMPLATE.replace("{story_batch}", json.dumps(batch, indent=2))
-        raw_cat = call_model(cat_prompt, CATEGORY_MODEL)
+        raw_cat = call_llm(cat_prompt, CATEGORY_MODEL)
         try:
             cleaned_cat = re.sub(r"^```(?:json)?\n|\n```$", "", raw_cat.strip())
             parsed_cat = json.loads(cleaned_cat)
@@ -131,7 +141,7 @@ def process_story_batch_split(story_batch, batch_size=5):
 
         # Second prompt: significance score
         sig_prompt = SIGNIFICANCE_PROMPT_TEMPLATE.replace("{story_batch}", json.dumps(enriched, indent=2))
-        raw_sig = call_model(sig_prompt, SIGNIFICANCE_MODEL)
+        raw_sig = call_llm(sig_prompt, SIGNIFICANCE_MODEL)
         try:
             cleaned_sig = re.sub(r"^```(?:json)?\n|\n```$", "", raw_sig.strip())
             parsed_sig = json.loads(cleaned_sig)
@@ -142,7 +152,7 @@ def process_story_batch_split(story_batch, batch_size=5):
 
         # Third prompt: relevance
         rel_prompt = RELEVANCE_PROMPT_TEMPLATE.replace("{story_batch}", json.dumps(enriched, indent=2))
-        raw_rel = call_model(rel_prompt, RELEVANCE_MODEL)
+        raw_rel = call_llm(rel_prompt, RELEVANCE_MODEL)
         try:
             cleaned_rel = re.sub(r"^```(?:json)?\n|\n```$", "", raw_rel.strip())
             parsed_rel = json.loads(cleaned_rel)
