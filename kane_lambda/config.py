@@ -7,6 +7,9 @@ Configuration module for feature toggles and constants.
 ENABLE_K_SHEET_CLEAN = False
 ENABLE_K_SELECTOR = False
 
+# Toggle to choose split-version prioritizer instead of the standard one
+USE_SPLIT_PRIORITIZER = True
+
 # Prioritizer settings
 CATEGORIES = [
     "Product_Research",
@@ -64,7 +67,7 @@ CATEGORIES  (choose ONE—no ties)
 If the blurb fails every definition above, output:  
 {
     "story_id": "#NUMBER",
-    "fact_summary": "BLURB",
+    "fact_summary": "PUT THE BLURB HERE",
     "category": "UNKNOWN",
     "categoryreason": "Not relevant",
     "significance_score": 1
@@ -125,6 +128,193 @@ Blurb: "OpenAI COO: 700 M images created with GPT-4o in 60 days."
     "categoryreason": "Revenue growth",
     "significance_score": 10
   }
+]
+
+NOW PROCESS THIS BATCH. RETURN NOTHING BUT THE JSON LIST.
+
+BLURBS: {story_batch}
+"""
+
+# Models for split prioritizer
+CATEGORY_MODEL = "google/gemini-2.5-flash-preview:thinking"  # using preview:thinking variant
+SIGNIFICANCE_MODEL = "google/gemini-2.5-pro-preview-03-25"  # placeholder for significance model name
+RELEVANCE_MODEL = "google/gemini-2.5-flash-preview:thinking"  # using preview:thinking variant
+
+# Prompt templates for split prioritizer
+CATEGORY_PROMPT_TEMPLATE = """
+You are CategoryClassifier-v2 for *The One AI Email*.  
+Input: a single ~30-word factual blurb already judged AI-relevant.  
+Output: exactly one category label (no lists) plus a ≤12-word category_reason, in flat JSON:
+
+{"category":"<CategoryName>","category_reason":"<short-reason>"}
+
+────────────────────────────────────────
+CATEGORIES  (choose ONE—no ties)
+
+1️⃣  Product_Research  
+    • Launches or major upgrades of AI products, features, or models that ship ≤6 months out  
+    • Benchmark-moving research results, open checkpoints, scaled deployments (≥100 M users/images/API calls)  
+
+2️⃣  Capital_Corporate_Moves  
+    • Full acquisitions or controlling stakes (M&A)  
+    • Venture / growth / grant funding **≥ US $100 M**  
+    • Strategic equity or commercial partnerships with disclosed value **≥ US $500 M** or multi-year revenue commitment  
+
+3️⃣  Infrastructure_Supply  
+    • Chips, HBM/HBM4, ASICs, foundry capacity, data-centre or network build-outs, cooling/power breakthroughs  
+    • Critical minerals, batteries, energy/storage projects **explicitly sized or located for AI workloads**  
+
+4️⃣  Market_Financial_Signals  
+    • Earnings, guidance, index/sector moves **≥ ±10 %** at AI-exposed firms  
+    • *NEW: Market or academic research that quantifies AI's economic or productivity impact*  
+      – e.g., "HBS study: marketers +56 % productivity using GenAI"  
+    • Capital-markets or macro data tied directly to AI demand/supply (e.g., "AI VC funding hits $113 B Q1")  
+    • Revenue, margin, or KPI changes companies **attribute primarily to AI** (e.g., "Intuit +5 % revenue from AI upsell")  
+
+5️⃣  Policy_Geopolitics  
+    • Enacted or near-certain laws, executive orders, export controls  
+    • Subsidies or incentives **≥ US $2 B**  
+    • Multilateral pacts (G-, WTO, OECD) that meaningfully affect AI
+
+If the blurb fails every definition above, output:  
+{"category":"Unknown","category_reason":"No strong match"}
+
+────────────────────────────────────────
+RULES  
+• Emit exactly one JSON object; no markdown, no extra keys, no whitespace padding.  
+• Select the **single best category**.  
+• Ignore any source note or attribution—it never changes the label.  
+• "Future-of-work / productivity" studies or company revenue bumps **belong in Market_Financial_Signals**.
+
+────────────────────────────────────────
+EXAMPLES  
+
+Blurb: "Nvidia posts record Q4 data-centre revenue of $35.6 B (+93 % YoY)."  
+{"category":"Market_Financial_Signals","category_reason":"Earnings move >±10 %"}
+
+Blurb: "OpenAI COO: 700 M images created with GPT-4o in 60 days."  
+{"category":"Product_Research","category_reason":"Usage milestone >100 M"}
+
+# OUTPUT example JSON array for batch
+OUTPUT
+[
+  {"story_id":"1","category":"Market_Financial_Signals","category_reason":"Earnings move >±10 %"},
+  {"story_id":"2","category":"Product_Research","category_reason":"Usage milestone >100 M"}
+]
+NOW PROCESS THIS BATCH. RETURN NOTHING BUT THE JSON LIST.
+
+BLURBS: {story_batch}
+"""
+
+SIGNIFICANCE_PROMPT_TEMPLATE = """
+SIGNIFICANCE RATING PROMPT v2
+------------------------------------------------------------
+
+Role  
+You are SignificanceScorer-v2 for *The One AI Email*.
+
+Objective  
+For every incoming fact record (a single 25-35-word factual blurb that has already been filtered for AI/tech relevance and categorised), estimate its importance to senior executives, institutional investors, and VCs by assigning an integer significance_score from **1** (low) to **10** (high).
+
+Audience Lens — What Matters  
+• Artificial Intelligence – model breakthroughs, large-scale deployments, enterprise adoption  
+• Semiconductors, Cloud & Enterprise Software – chips, tooling, hyperscale infra  
+• Energy for Tech Workloads – generation or storage sized for data-centres/AI  
+• Capital Markets – M&A, funding ≥ $50 M, major stock or index moves  
+• Policy & Geopolitics – laws, subsidies, export controls that materially alter AI/tech
+
+Scoring Framework  
+(Start at 5 as a neutral baseline; adjust using the triggers below.)
+
+  Score | Typical Triggers (illustrative, not exhaustive)
+  ------|--------------------------------------------------
+  9-10  | • Landmark AI model (state-of-the-art leap, paradigm shift)  
+        | • Mega-deals: M&A ≥ $10 B, funding ≥ $1 B, DC/fab spend ≥ $10 B  
+        | • Global-reach regulation (e.g., US/EU chip export bans)  
+        | • Market jolts ≥ ±20 % in FAANG-plus or AI index  
+  7-8   | • New models beating key benchmarks, mass-market product launches  
+        | • Funding $250 M–$1 B, M&A $1 B–$10 B  
+        | • Data-centre / fab projects ≥ $1 B  
+        | • National AI subsidies or mandates ≥ $1 B  
+        | • Stock moves 10–20 % in major AI names  
+  5-6   | • Mid-tier deals (funding $50 M–$250 M, M&A $100 M–$1 B)  
+        | • Competitive feature releases from secondary players  
+        | • Early-stage regulatory drafts or regional incentives  
+        | • Earnings beats/misses < 10 % at AI-leveraged firms  
+  3-4   | • Minor product tweaks, small partnerships, seed/Series A < $50 M  
+        | • Local or preliminary policy chatter  
+        | • Limited-scope infra announcements (< $500 M)  
+  1-2   | • Tangential or narrowly scoped updates with negligible strategic impact  
+        | • Pure speculation or opinion without concrete action/metric  
+
+Adjustment Rules  
+1. Concentration of Impact  
+   If the story directly involves any of these tickers—MSFT, GOOGL, AAPL, AMZN, NVDA, META, TSLA, TSM, INTC, AMD—add **+1** unless clearly trivial.
+
+2. Novelty & Momentum  
+   Down-rate incremental follow-ups unless fresh metrics or milestones show ≥ 10 % change or a materially new angle.
+
+Output Specification  
+Return ONLY a JSON list of objects with keys "story_id" and "significance_score". No extra characters.
+
+EXAMPLES
+
+Input Blurb:  
+"OpenAI unveils GPT-5, outperforming GPT-4o by 40 % on MMLU and reducing inference cost 3×."  
+Output:  
+[{"story_id":"1","significance_score":10}]
+
+Input Blurb:  
+"Nvidia (NVDA) buys photonics start-up Ayar Labs for $2.9 B to integrate optical I/O in next-gen GPUs."  
+Output:  
+[{"story_id":"2","significance_score":8}]
+
+# OUTPUT example JSON array for batch
+OUTPUT
+[
+  {"story_id":"1","significance_score":10},
+  {"story_id":"2","significance_score":8}
+]
+
+NOW PROCESS THIS BATCH. RETURN NOTHING BUT THE JSON LIST.
+
+BLURBS: {story_batch}
+"""
+
+RELEVANCE_PROMPT_TEMPLATE = """
+You are a binary filter for an AI-only newsletter.
+
+TASK
+Read the 30-word blurb.  
+If its main subject is inside the AI stack (see definitions), output exactly {"relevance":"IN"}.  
+Else output exactly {"relevance":"SKIP"}.
+
+AI-STACK DEFINITIONS (include any direct consequence):
+• Core-AI-Tech – model development/training/benchmarks
+• Application-Usage – AI-driven software, robotics, autonomous vehicles, smart devices
+• Physical-Infrastructure – AI chips, fabs, data-centres, networks, cooling, critical minerals/batteries
+• Foundation-Energy – energy/storage projects built for AI workloads
+• Impact-Layer – strategy, capital markets, jobs, geopolitics, culture, education, daily life changes clearly caused by AI
+
+STRICT RULES
+– Choose only one value: "IN" or "SKIP".  
+– No extra keys, text, or whitespace.
+
+EXAMPLES
+
+Blurb: "Nvidia unveils HBM4 memory quadrupling AI training speed."  
+Output:  
+[{"story_id":"1","relevant":"IN"}]
+
+Blurb: "Boeing buys Spirit AeroSystems for fuselage supply chain."  
+Output:  
+[{"story_id":"2","relevant":"SKIP"}]
+
+# OUTPUT example JSON array for batch
+OUTPUT
+[
+  {"story_id":"1","relevant":"IN"},
+  {"story_id":"2","relevant":"SKIP"}
 ]
 
 NOW PROCESS THIS BATCH. RETURN NOTHING BUT THE JSON LIST.
