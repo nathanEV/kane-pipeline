@@ -137,6 +137,15 @@ def extract_snippet_author_batch(summaries, headlines, known_authors=None, batch
 
         except Exception as e:
             print("⚠️ LLM batch extraction failed:", e)
+            # Log model, prompt, request and response details
+            try:
+                print("🔍 Model:", HEADSCANNER_MODEL)
+                print("🔍 Prompt to model:\n", prompt)
+                print("🔍 Request payload:", json.dumps(payload))
+                print("🔍 Response status:", response.status_code)
+                print("🔍 Response body:", response.text)
+            except Exception:
+                pass
             print("🔎 Raw response snippet:\n", content[:300])
             for _ in batch:
                 results.append({"context_snippet": "", "author": ""})
