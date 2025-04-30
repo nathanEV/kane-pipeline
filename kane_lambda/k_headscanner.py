@@ -86,6 +86,8 @@ def extract_real_url(summary: str) -> str:
     return match.group(1) if match else ""
 
 def extract_snippet_author_batch(summaries, headlines, known_authors=None, batch_size=5):
+    # initialize content for error handling across all batches
+    content = ""
     if known_authors is None:
         known_authors = [""] * len(summaries)
 
@@ -109,8 +111,6 @@ def extract_snippet_author_batch(summaries, headlines, known_authors=None, batch
             "temperature": 0.3,
         }
 
-        # initialize content for error handling
-        content = ""
         try:
             response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
             response.raise_for_status()
