@@ -43,7 +43,23 @@ RSS_FEEDS = [
     ("https://www.techinasia.com/feed", "Tech in Asia"),
     ("https://www.scmp.com/rss/91/feed", "SCMP Technology"),
     ("https://www.datacenterdynamics.com/en/rss/", "DatacenterDynamics"),
-    ("https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml", "NYT Technology")
+    ("https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml", "NYT Technology"),
+    ("https://digital-strategy.ec.europa.eu/en/rss.xml", "EU Digital Strategy"),
+    ("https://www.artificialintelligence-news.com/feed/", "Artificial Intelligence News"),
+    ("https://epochai.org/atom.xml", "Epoch AI Blog"),
+    ("https://deepmind.google/blog/rss.xml", "Google DeepMind Blog"),
+    ("https://www.techdirt.com/feed/", "Techdirt"),
+    ("https://about.bnef.com/blog/feed/", "BloombergNEF Blog"),
+    ("https://feeds.bloomberg.com/technology/news.rss", "Bloomberg Technology"),
+    ("https://www.politico.eu/section/competition/feed/", "POLITICO Competition"),
+    ("https://www.politico.eu/section/technology/feed/", "POLITICO Technology"),
+    ("https://www.politico.eu/section/cybersecurity/feed/", "POLITICO Cybersecurity"),
+    ("https://tech.eu/feed/", "Tech.eu"),
+    ("https://www.politico.eu/section/energy/feed/", "POLITICO Energy"),
+    ("https://www.aei.org/feed/", "American Enterprise Institute"),
+    ("https://www.bruegel.org/rss.xml", "Bruegel"),
+    ("https://cepr.net/feed/", "Center for Economic & Policy Research"),
+    ("https://www.hpcwire.com/feed/", "HPCwire"),
 ]
 # === HELPERS ===
 
@@ -93,6 +109,8 @@ def extract_snippet_author_batch(summaries, headlines, known_authors=None, batch
             "temperature": 0.3,
         }
 
+        # initialize content for error handling
+        content = ""
         try:
             response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
             response.raise_for_status()
