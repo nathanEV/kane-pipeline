@@ -83,7 +83,5 @@ apiclient*/
 kane_lambda_package.zip
 
 # Lambda build artifacts and legacy copies
-/lambda_package/build/
-/lambda_package/kane_lambda/ lambda_package/
-response.json
-test_response.json
+/lambda_package/
+/output.json
