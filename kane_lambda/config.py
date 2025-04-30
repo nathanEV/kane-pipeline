@@ -231,11 +231,11 @@ Objective
 For every incoming fact record (a single 25-35-word factual blurb that has already been filtered for AI/tech relevance and categorised), estimate its importance to senior executives, institutional investors, and VCs by assigning an integer significance_score from **1** (low) to **10** (high).
 
 Audience Lens — What Matters  
-• Artificial Intelligence – model breakthroughs, large-scale deployments, enterprise adoption  
-• Semiconductors, Cloud & Enterprise Software – chips, tooling, hyperscale infra  
-• Energy for Tech Workloads – generation or storage sized for data-centres/AI  
-• Capital Markets – M&A, funding ≥ $50 M, major stock or index moves  
-• Policy & Geopolitics – laws, subsidies, export controls that materially alter AI/tech
+•   Artificial Intelligence: Model breakthroughs, large-scale deployments, enterprise adoption, significant research shifts.
+•   Semiconductors, Cloud & Enterprise Software: Chip advancements, critical tooling, hyperscale infrastructure build-outs or constraints.
+•   Energy for Tech Workloads: Generation or storage projects/tech sized for data-centres/AI impacting cost or availability.
+•   Capital Markets: M&A, funding ≥ $50 M, major stock/index moves related to AI/tech players.
+•   Policy, Geopolitics & Major Disruptions: Laws, subsidies, export controls; significant failures, security breaches, intense competitive conflicts, or major controversies involving key players that materially alter the AI/tech landscape or strategic positioning.
 
 Scoring Framework  
 (Start at 5 as a neutral baseline; adjust using the triggers below.)
@@ -262,7 +262,7 @@ Scoring Framework
         | • Pure speculation or opinion without concrete action/metric  
 
 Adjustment Rules  
-1. Concentration of Impact  
+1. Concentration of Impact (Power Elite) 
    If the story directly involves any of the major AI labs (OpenAI, Google, Meta, Anthropic, etc.) or any of these tickers—MSFT, GOOGL, AAPL, AMZN, NVDA, META, TSLA, TSM, INTC, AMD—add **+1** unless clearly trivial.
 
 2. Novelty & Momentum  
@@ -419,38 +419,142 @@ BLURBS: {story_batch}
 """
 
 # Headscanner settings
-HEADSCANNER_MODEL = "gemini-2.5-pro-preview-03-25"  # model for headscanner
+HEADSCANNER_MODEL = "google/gemini-2.5-pro-preview-03-25"  # model for headscanner
 HEADSCANNER_PROMPT_TEMPLATE = """
 You are a structured news assistant.
 
-For each input item, extract:
-- "context_snippet": A short sentence that encapsulates the context of the news item.
-- "author": Extract only if has_author is false, else return an empty string.
+        For each input item, extract:
+        - "context_snippet": A short sentence that encapsulates the context of the news item.
+        - "author": Extract only if has_author is false, else return an empty string.
 
-Return only a JSON array of objects. No commentary, no markdown, no formatting, no headings.
+        Return only a JSON array of objects. No commentary, no markdown, no formatting, no headings.
 
-Here are some examples of what the context_snippet should look like:
-[
-    {
-        "context_snippet": "Global startup funding surged to $113B in Q1, up 54% YoY, with AI dominating 77% of US deal value, demonstrating robust AI investment momentum.",
-        "author": "Emily Carter"
-    },
-    {
-        "context_snippet": "China's low-altitude economy is projected to reach $207B in 2025, with two Chinese companies receiving regulatory approval to launch autonomous passenger drones (flying taxis).",
-        "author": "Liang Zhou"
-    }
-    # ... add more examples as needed ...
-]
+        Here are some examples of what the context_snippet should look like:
+        [
+            {
+                "context_snippet": "Global startup funding surged to $113B in Q1, up 54% YoY, with AI dominating 77% of US deal value, demonstrating robust AI investment momentum.",
+                "author": "Emily Carter"
+            },
+            {
+                "context_snippet": "China’s low-altitude economy is projected to reach $207B in 2025, with two Chinese companies receiving regulatory approval to launch autonomous passenger drones (flying taxis).",
+                "author": "Liang Zhou"
+            },
+            {
+                "context_snippet": "Figure AI has deployed fully autonomous humanoid robots at a BMW factory, achieving end-to-end autonomy in a major milestone for industrial robotics.",
+                "author": "Patrick O’Neill"
+            },
+            {
+                "context_snippet": "US companies face strategic uncertainty responding to Trump’s trade war with China.",
+                "author": "Amanda Reyes"
+            },
+            {
+                "context_snippet": "Samsung has turned to Chinese customers like Baidu to prop up its ailing chip business and is the "biggest supplier of HBM into China".",
+                "author": "David Kim"
+            },
+            {
+                "context_snippet": "India’s venture capital funding rebounded to $13.7 billion in 2024, up 1.4x from 2023, with 45% more deals (1,270 total).",
+                "author": "Priya Nair"
+            },
+            {
+                "context_snippet": "Apple is considering increasing the starting price of its iPhone due to tariffs imposed on its major production sources.",
+                "author": "Olivia Bennett"
+            },
+            {
+                "context_snippet": "Meta launched Llama 4 Maverick with 400B parameters and Scout with 109B parameters and a 10M context window.",
+                "author": "Jason Park"
+            },
+            {
+                "context_snippet": "Anthropic’s Alignment Science team found that the "legibility" or "faithfulness" of reasoning models’ Chain-of-Thought can’t be trusted and models may actively hide reasoning.",
+                "author": "Natalie Gomez"
+            },
+            {
+                "context_snippet": "Google’s Gemini 2.5 Pro achieved a high score on the GPQA Diamond test, outperforming human experts by 14 points, demonstrating exceptional reasoning capabilities.",
+                "author": "Victor Singh"
+            },
+            {
+                "context_snippet": "DeepMind’s experimental AI model learned to collect diamonds in Minecraft without explicit instructions, showcasing emergent reasoning capabilities.",
+                "author": "Hannah Laurent"
+            },
+            {
+                "context_snippet": "Cognition launched Devin 2.0, an advanced AI coding tool that autonomously handles 80% of coding needs, representing a significant advancement in AI-assisted software development.",
+                "author": "Kevin Morales"
+            },
+            {
+                "context_snippet": "Meta is expected to share news about a Llama 4 Reasoning model "in the next month" according to Mark Zuckerberg.",
+                "author": "Rachel Stein"
+            },
+            {
+                "context_snippet": "Amazon is experimenting with an "agentic ‘Buy for Me’ button" that lets AI make purchases on behalf of users, potentially revolutionizing e-commerce with autonomous shopping assistance.",
+                "author": "Ethan Brooks"
+            },
+            {
+                "context_snippet": "Genspark has launched a general-purpose Super Agent that outperforms Butterfly Effect’s Manus agent and OpenAI’s Deep Research on the GAIA benchmark.",
+                "author": "Sofia Alvarez"
+            },
+            {
+                "context_snippet": "SandboxAQ raised a $150M Series E extension from Google, Nvidia, and others, taking its total funding to $950M+.",
+                "author": "Marcus Lee"
+            },
+            {
+                "context_snippet": "Investors have poured $7.2B into 50+ humanoid robot startups since 2015, with $1.6B invested in 2024 alone.",
+                "author": "Isabella Rossi"
+            },
+            {
+                "context_snippet": "Miami-based remittance startup Felix Pago raised a $75M Series B led by QED, following impressive growth with over $1B in WhatsApp money transfers via stablecoins in 2024.",
+                "author": "Gabriel Silva"
+            },
+            {
+                "context_snippet": "Runway, an AI video startup, closed a $308M funding round, more than doubling its valuation to $3B, highlighting continued investor confidence in generative video AI.",
+                "author": "Chloe Martin"
+            },
+            {
+                "context_snippet": "Chef Robotics has raised $43.1M in Series A funding to develop meal assembly robots, accelerating automation in food preparation.",
+                "author": "Daniel Cooper"
+            },
+            {
+                "context_snippet": "New US tariffs on Chinese goods could increase the bill of materials for the iPhone 16 Pro with 256GB storage from $550 to $850.",
+                "author": "Alexis Wright"
+            },
+            {
+                "context_snippet": "OpenAI and Google rejected the UK’s proposal to allow training AI on copyrighted work without permission unless rights holders opt out.",
+                "author": "Hiroshi Tanaka"
+            },
+            {
+                "context_snippet": "US Commerce Secretary Howard Lutnick signals withholding promised CHIPS Act grants as he pushes companies to substantially expand their US projects.",
+                "author": "Lauren Mitchell"
+            },
+            {
+                "context_snippet": "The BBC has complained to the UK CMA about Apple and Google’s news aggregators downplaying BBC branding, raising concerns about platform power in digital media.",
+                "author": "Ahmed Hassan"
+            },
+            {
+                "context_snippet": "Intel and TSMC have reached a preliminary agreement to form a joint venture that will operate Intel’s chipmaking facilities with TSMC taking a 20% stake.",
+                "author": "Julia Schneider"
+            },
+            {
+                "context_snippet": "Accenture and Schaeffler are teaming up to overhaul industrial automation using NVIDIA Omniverse, potentially transforming manufacturing processes.",
+                "author": "Fernando Costa"
+            },
+            {
+                "context_snippet": "Hyundai Motor Group is set to buy tens of thousands of robots from Boston Dynamics, marking one of the largest humanoid robot deals to date.",
+                "author": "Yuna Kim"
+            },
+            {
+                "context_snippet": "Amazon has bid to buy TikTok as its April 5 sell-off deadline approaches, potentially marking a major consolidation in the social media landscape.",
+                "author": "Benjamin Clark"
+            } 
+        ]
 
-Format:
-[
-    {
-        "context_snippet": "A direct sentence from summary.",
-        "author": "Author Name"
-    },
-    ...
-]
+        Format:
+        [
+        {
+            "context_snippet": "A direct sentence from summary.",
+            "author": "Author Name"
+        },
+        ...
+        ]
 
-INPUT:
-{batch}
+
+        INPUT:
+        {batch}
 """
