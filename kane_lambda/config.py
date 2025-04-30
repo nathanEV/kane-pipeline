@@ -1,4 +1,5 @@
 # config.py
+import os
 """
 Configuration module for feature toggles and constants.
 """
@@ -9,6 +10,18 @@ ENABLE_K_SELECTOR = False
 
 # Toggle to choose split-version prioritizer instead of the standard one
 USE_SPLIT_PRIORITIZER = True
+
+# LLM backend selection: "openrouter" or "gemini"
+LLM_BACKEND = "gemini"
+
+# Gemini API key (for Google GenAI client)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+
+# Model name constants for split prioritizer and headscanner
+CATEGORY_MODEL = "google/gemini-2.5-flash-preview:thinking"
+SIGNIFICANCE_MODEL = "google/gemini-2.5-pro-preview-03-25"
+RELEVANCE_MODEL = "google/gemini-2.5-flash-preview:thinking"
+HEADSCANNER_MODEL = "google/gemini-2.5-pro-preview-03-25"
 
 # Prioritizer settings
 CATEGORIES = [
@@ -134,11 +147,6 @@ NOW PROCESS THIS BATCH. RETURN NOTHING BUT THE JSON LIST.
 
 BLURBS: {story_batch}
 """
-
-# Models for split prioritizer
-CATEGORY_MODEL = "google/gemini-2.5-flash-preview:thinking"  # using preview:thinking variant
-SIGNIFICANCE_MODEL = "google/gemini-2.5-pro-preview-03-25"  # placeholder for significance model name
-RELEVANCE_MODEL = "google/gemini-2.5-flash-preview:thinking"  # using preview:thinking variant
 
 # Prompt templates for split prioritizer
 CATEGORY_PROMPT_TEMPLATE = """
@@ -418,8 +426,7 @@ NOW PROCESS THIS BATCH. RETURN NOTHING BUT THE JSON LIST.
 BLURBS: {story_batch}
 """
 
-# Headscanner settings
-HEADSCANNER_MODEL = "google/gemini-2.5-pro-preview-03-25"  # model for headscanner
+# Headscanner prompt template
 HEADSCANNER_PROMPT_TEMPLATE = """
 You are a structured news assistant.
 
@@ -436,15 +443,15 @@ You are a structured news assistant.
                 "author": "Emily Carter"
             },
             {
-                "context_snippet": "China’s low-altitude economy is projected to reach $207B in 2025, with two Chinese companies receiving regulatory approval to launch autonomous passenger drones (flying taxis).",
+                "context_snippet": "China's low-altitude economy is projected to reach $207B in 2025, with two Chinese companies receiving regulatory approval to launch autonomous passenger drones (flying taxis).",
                 "author": "Liang Zhou"
             },
             {
                 "context_snippet": "Figure AI has deployed fully autonomous humanoid robots at a BMW factory, achieving end-to-end autonomy in a major milestone for industrial robotics.",
-                "author": "Patrick O’Neill"
+                "author": "Patrick O'Neill"
             },
             {
-                "context_snippet": "US companies face strategic uncertainty responding to Trump’s trade war with China.",
+                "context_snippet": "US companies face strategic uncertainty responding to Trump's trade war with China.",
                 "author": "Amanda Reyes"
             },
             {
@@ -452,7 +459,7 @@ You are a structured news assistant.
                 "author": "David Kim"
             },
             {
-                "context_snippet": "India’s venture capital funding rebounded to $13.7 billion in 2024, up 1.4x from 2023, with 45% more deals (1,270 total).",
+                "context_snippet": "India's venture capital funding rebounded to $13.7 billion in 2024, up 1.4x from 2023, with 45% more deals (1,270 total).",
                 "author": "Priya Nair"
             },
             {
@@ -464,15 +471,15 @@ You are a structured news assistant.
                 "author": "Jason Park"
             },
             {
-                "context_snippet": "Anthropic’s Alignment Science team found that the "legibility" or "faithfulness" of reasoning models’ Chain-of-Thought can’t be trusted and models may actively hide reasoning.",
+                "context_snippet": "Anthropic's Alignment Science team found that the "legibility" or "faithfulness" of reasoning models' Chain-of-Thought can't be trusted and models may actively hide reasoning.",
                 "author": "Natalie Gomez"
             },
             {
-                "context_snippet": "Google’s Gemini 2.5 Pro achieved a high score on the GPQA Diamond test, outperforming human experts by 14 points, demonstrating exceptional reasoning capabilities.",
+                "context_snippet": "Google's Gemini 2.5 Pro achieved a high score on the GPQA Diamond test, outperforming human experts by 14 points, demonstrating exceptional reasoning capabilities.",
                 "author": "Victor Singh"
             },
             {
-                "context_snippet": "DeepMind’s experimental AI model learned to collect diamonds in Minecraft without explicit instructions, showcasing emergent reasoning capabilities.",
+                "context_snippet": "DeepMind's experimental AI model learned to collect diamonds in Minecraft without explicit instructions, showcasing emergent reasoning capabilities.",
                 "author": "Hannah Laurent"
             },
             {
@@ -484,11 +491,11 @@ You are a structured news assistant.
                 "author": "Rachel Stein"
             },
             {
-                "context_snippet": "Amazon is experimenting with an "agentic ‘Buy for Me’ button" that lets AI make purchases on behalf of users, potentially revolutionizing e-commerce with autonomous shopping assistance.",
+                "context_snippet": "Amazon is experimenting with an "agentic 'Buy for Me' button" that lets AI make purchases on behalf of users, potentially revolutionizing e-commerce with autonomous shopping assistance.",
                 "author": "Ethan Brooks"
             },
             {
-                "context_snippet": "Genspark has launched a general-purpose Super Agent that outperforms Butterfly Effect’s Manus agent and OpenAI’s Deep Research on the GAIA benchmark.",
+                "context_snippet": "Genspark has launched a general-purpose Super Agent that outperforms Butterfly Effect's Manus agent and OpenAI's Deep Research on the GAIA benchmark.",
                 "author": "Sofia Alvarez"
             },
             {
@@ -516,7 +523,7 @@ You are a structured news assistant.
                 "author": "Alexis Wright"
             },
             {
-                "context_snippet": "OpenAI and Google rejected the UK’s proposal to allow training AI on copyrighted work without permission unless rights holders opt out.",
+                "context_snippet": "OpenAI and Google rejected the UK's proposal to allow training AI on copyrighted work without permission unless rights holders opt out.",
                 "author": "Hiroshi Tanaka"
             },
             {
@@ -524,11 +531,11 @@ You are a structured news assistant.
                 "author": "Lauren Mitchell"
             },
             {
-                "context_snippet": "The BBC has complained to the UK CMA about Apple and Google’s news aggregators downplaying BBC branding, raising concerns about platform power in digital media.",
+                "context_snippet": "The BBC has complained to the UK CMA about Apple and Google's news aggregators downplaying BBC branding, raising concerns about platform power in digital media.",
                 "author": "Ahmed Hassan"
             },
             {
-                "context_snippet": "Intel and TSMC have reached a preliminary agreement to form a joint venture that will operate Intel’s chipmaking facilities with TSMC taking a 20% stake.",
+                "context_snippet": "Intel and TSMC have reached a preliminary agreement to form a joint venture that will operate Intel's chipmaking facilities with TSMC taking a 20% stake.",
                 "author": "Julia Schneider"
             },
             {
