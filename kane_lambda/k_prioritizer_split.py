@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 from dateutil import parser as date_parser
 import pytz
 import google.genai as genai
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from kane_lambda.config import (
     CATEGORY_MODEL,
@@ -48,6 +49,8 @@ def read_stories_from_sheet(spreadsheet_id, sheet_name, creds_file):
     story_batch = []
     for row in rows:
         story = dict(zip(headers, row))
+        # Normalize input_type from possible header variants
+        raw_input_type = (story.get("input_type") or story.get("input type") or story.get("Input Type") or story.get("inputType") or "")
         story_batch.append({
             "story_id": story.get("story_id", ""),
             "author": story.get("author", ""),
@@ -56,7 +59,7 @@ def read_stories_from_sheet(spreadsheet_id, sheet_name, creds_file):
             "source_url": story.get("source_url", ""),
             "publication_date": story.get("publication_date", ""),
             "human_priority": int(story.get("human_priority", "0") or 0),
-            "input_type": story.get("input_type", "")
+            "input_type": raw_input_type
         })
     return story_batch
 
@@ -112,87 +115,100 @@ def parse_source_from_url(url):
     except Exception:
         return ""
 
-def process_story_batch_split(story_batch, batch_size=5):
+def _process_one_batch(batch, batch_number):
+    print(f"\n🔄 Processing batch {batch_number} ({len(batch)} stories)...")
     results = []
-    for i in range(0, len(story_batch), batch_size):
-        batch = story_batch[i:i+batch_size]
-        print(f"\n🔄 Processing batch {i//batch_size + 1} ({len(batch)} stories)...")
+    # First prompt: category & reason
+    cat_prompt = CATEGORY_PROMPT_TEMPLATE.replace("{story_batch}", json.dumps(batch, indent=2))
+    raw_cat = call_llm(cat_prompt, CATEGORY_MODEL)
+    try:
+        cleaned_cat = re.sub(r"^```(?:json)?\n|\n```$", "", raw_cat.strip())
+        parsed_cat = json.loads(cleaned_cat)
+    except json.JSONDecodeError as e:
+        print("❌ Failed to parse category response:", e)
+        print("🔍 Raw category response:", raw_cat)
+        return []
 
-        # First prompt: category & reason
-        cat_prompt = CATEGORY_PROMPT_TEMPLATE.replace("{story_batch}", json.dumps(batch, indent=2))
-        raw_cat = call_llm(cat_prompt, CATEGORY_MODEL)
+    # Enrich with category fields
+    enriched = []
+    for original, item in zip(batch, parsed_cat):
+        enriched.append({
+            **original,
+            "fact_summary": original.get("context_snippet", ""),
+            "category": item.get("category", ""),
+            "category_reason": item.get("category_reason", "")
+        })
+
+    # Second prompt: significance score
+    sig_prompt = SIGNIFICANCE_PROMPT_TEMPLATE.replace("{story_batch}", json.dumps(enriched, indent=2))
+    raw_sig = call_llm(sig_prompt, SIGNIFICANCE_MODEL)
+    try:
+        cleaned_sig = re.sub(r"^```(?:json)?\n|\n```$", "", raw_sig.strip())
+        parsed_sig = json.loads(cleaned_sig)
+    except json.JSONDecodeError as e:
+        print("❌ Failed to parse significance response:", e)
+        print("🔍 Raw significance response:", raw_sig)
+        return []
+
+    # Third prompt: relevance
+    rel_prompt = RELEVANCE_PROMPT_TEMPLATE.replace("{story_batch}", json.dumps(enriched, indent=2))
+    raw_rel = call_llm(rel_prompt, RELEVANCE_MODEL)
+    try:
+        cleaned_rel = re.sub(r"^```(?:json)?\n|\n```$", "", raw_rel.strip())
+        parsed_rel = json.loads(cleaned_rel)
+    except json.JSONDecodeError as e:
+        print("❌ Failed to parse relevance response:", e)
+        print("🔍 Raw relevance response:", raw_rel)
+        return []
+
+    # Merge relevance and build final list
+    for item, rel_item in zip(enriched, parsed_rel):
+        item["relevant"] = rel_item.get("relevant", "")
+
+    batch_results = []
+    for item, sig_item in zip(enriched, parsed_sig):
+        sid = item["story_id"]
+        readable_source = parse_source_from_url(item.get("source_url", ""))
+        raw_pub = item.get("publication_date", "")
         try:
-            cleaned_cat = re.sub(r"^```(?:json)?\n|\n```$", "", raw_cat.strip())
-            parsed_cat = json.loads(cleaned_cat)
-        except json.JSONDecodeError as e:
-            print("❌ Failed to parse category response:", e)
-            print("🔍 Raw category response:", raw_cat)
-            continue
+            dt = date_parser.parse(raw_pub)
+            dt_utc = dt.astimezone(pytz.UTC) if dt.tzinfo else dt.replace(tzinfo=pytz.UTC)
+            pub_date_str = dt_utc.strftime("%Y-%m-%d")
+        except Exception:
+            pub_date_str = raw_pub
 
-        # Merge category info by list position; use sheet's story_id and context_snippet
-        enriched = []
-        for original, item in zip(batch, parsed_cat):
-            enriched.append({
-                **original,
-                "fact_summary": original.get("context_snippet", ""),
-                "category": item.get("category", ""),
-                "category_reason": item.get("category_reason", "")
-            })
+        batch_results.append({
+            "story_id": sid,
+            "author": item.get("author", ""),
+            "headline": item.get("headline", ""),
+            "fact_summary": item.get("fact_summary", ""),
+            "source_url": item.get("source_url", ""),
+            "source_name": readable_source,
+            "publication_date": pub_date_str,
+            "category": item.get("category", ""),
+            "category_reason": item.get("category_reason", ""),
+            "significance_score": sig_item.get("significance_score", ""),
+            "relevant": item.get("relevant", ""),
+            "human_priority": item.get("human_priority", 0),
+            "input_type": item.get("input_type", "")
+        })
+    return batch_results
 
-        # Second prompt: significance score
-        sig_prompt = SIGNIFICANCE_PROMPT_TEMPLATE.replace("{story_batch}", json.dumps(enriched, indent=2))
-        raw_sig = call_llm(sig_prompt, SIGNIFICANCE_MODEL)
-        try:
-            cleaned_sig = re.sub(r"^```(?:json)?\n|\n```$", "", raw_sig.strip())
-            parsed_sig = json.loads(cleaned_sig)
-        except json.JSONDecodeError as e:
-            print("❌ Failed to parse significance response:", e)
-            print("🔍 Raw significance response:", raw_sig)
-            continue
-
-        # Third prompt: relevance
-        rel_prompt = RELEVANCE_PROMPT_TEMPLATE.replace("{story_batch}", json.dumps(enriched, indent=2))
-        raw_rel = call_llm(rel_prompt, RELEVANCE_MODEL)
-        try:
-            cleaned_rel = re.sub(r"^```(?:json)?\n|\n```$", "", raw_rel.strip())
-            parsed_rel = json.loads(cleaned_rel)
-        except json.JSONDecodeError as e:
-            print("❌ Failed to parse relevance response:", e)
-            print("🔍 Raw relevance response:", raw_rel)
-            continue
-
-        # Merge relevance info by list position
-        for item, rel_item in zip(enriched, parsed_rel):
-            item["relevant"] = rel_item.get("relevant", "")
-
-        # Build final results by list position; ignore story_id from LLM output
-        for item, sig_item in zip(enriched, parsed_sig):
-            sid = item["story_id"]
-            source_url = item.get("source_url", "")
-            readable_source = parse_source_from_url(source_url)
-            raw_pub = item.get("publication_date", "")
+def process_story_batch_split(story_batch, batch_size=5):
+    batches = [story_batch[i:i+batch_size] for i in range(0, len(story_batch), batch_size)]
+    results = []
+    # Cap concurrency to avoid overwhelming Lambda
+    max_workers = min(len(batches), batch_size)
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_batch = {executor.submit(_process_one_batch, batch, idx+1): idx+1 for idx, batch in enumerate(batches)}
+        for future in as_completed(future_to_batch):
+            batch_number = future_to_batch[future]
             try:
-                dt = date_parser.parse(raw_pub)
-                dt_utc = dt.astimezone(pytz.UTC) if dt.tzinfo else dt.replace(tzinfo=pytz.UTC)
-                pub_date_str = dt_utc.strftime("%Y-%m-%d")
-            except Exception:
-                pub_date_str = raw_pub
-
-            results.append({
-                "story_id": sid,
-                "author": item.get("author", ""),
-                "headline": item.get("headline", ""),
-                "fact_summary": item.get("fact_summary", ""),
-                "source_url": source_url,
-                "source_name": readable_source,
-                "publication_date": pub_date_str,
-                "category": item.get("category", ""),
-                "category_reason": item.get("category_reason", ""),
-                "significance_score": sig_item.get("significance_score", ""),
-                "relevant": item.get("relevant", ""),
-                "human_priority": item.get("human_priority", 0),
-                "input_type": item.get("input_type", "")
-            })
+                batch_results = future.result()
+                if batch_results:
+                    results.extend(batch_results)
+            except Exception as e:
+                print(f"❌ Batch {batch_number} failed:", e)
     return results
 
 def write_results_to_sheet(spreadsheet_id, sheet_name, results, creds_file):
@@ -239,7 +255,7 @@ def run_split_prioritizer():
 
     if not story_batch:
         print("🚫 No input stories found.")
-        exit()
+        return
 
     print("📤 Checking processed stories in output sheet...")
     processed_ids = get_processed_story_ids(SHEET_ID, OUTPUT_SHEET_NAME, CREDS_FILE)
