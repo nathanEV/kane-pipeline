@@ -7,9 +7,14 @@ rm -rf build
 mkdir -p build
 mkdir -p build/kane_lambda
 
-# 2) Install all requirements into build/python
-git_root=$(dirname "$BASH_SOURCE")
-python3 -m pip install -r ../requirements.txt --target build/python --upgrade
+# 2) Install all requirements into build/python (ensure Linux-compatible binaries)
+if command -v docker >/dev/null 2>&1; then
+  echo "Building dependencies inside Docker container for Linux compatibility..."
+  docker run --rm -v "$(pwd)/..":/var/task -w /var/task/lambda_package public.ecr.aws/lambda/python:3.12 bash -c "pip install -r ../requirements.txt --target build/python --upgrade"
+else
+  echo "Warning: Docker not found, building on host may produce incompatible binaries"
+  python3 -m pip install -r ../requirements.txt --target build/python --upgrade
+fi
 
 # If dependencies installed into a python/ dir, move them to root
 if [ -d build/python ]; then
