@@ -13,7 +13,7 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 echo "Building dependencies inside Docker container for Linux compatibility..."
-docker run --rm \
+docker run --rm --platform linux/amd64 \
   -v "$(pwd)/..":/var/task \
   -w /var/task/lambda_package \
   --entrypoint bash \
@@ -31,9 +31,13 @@ cp -r ../kane_lambda/* build/kane_lambda/
 cp ../kane_lambda/__init__.py build/kane_lambda/
 cp service_account.json build/
 
-# 4) Zip it up
+# 4) Clean up compiled and cache files to slim package
+find build -type d -name '__pycache__' -exec rm -rf {} +
+find build -type f -name '*.pyc' -delete
+
+# 5) Zip it up, excluding caches
 cd build
-zip -r9 ../kane_lambda_package.zip .
+zip -r9 ../kane_lambda_package.zip . -x "*__pycache__*" "*.pyc"
 cd ..
 
 echo "✅ Built lambda_package/kane_lambda_package.zip" 
