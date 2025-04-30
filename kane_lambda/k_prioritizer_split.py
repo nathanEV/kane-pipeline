@@ -52,7 +52,8 @@ def read_stories_from_sheet(spreadsheet_id, sheet_name, creds_file):
             "context_snippet": story.get("context_snippet", ""),
             "source_url": story.get("source_url", ""),
             "publication_date": story.get("publication_date", ""),
-            "human_priority": int(story.get("human_priority", "0") or 0)
+            "human_priority": int(story.get("human_priority", "0") or 0),
+            "input_type": story.get("input_type", "")
         })
     return story_batch
 
@@ -179,7 +180,8 @@ def process_story_batch_split(story_batch, batch_size=5):
                 "category_reason": item.get("category_reason", ""),
                 "significance_score": sig_item.get("significance_score", ""),
                 "relevant": item.get("relevant", ""),
-                "human_priority": item.get("human_priority", 0)
+                "human_priority": item.get("human_priority", 0),
+                "input_type": item.get("input_type", "")
             })
     return results
 
@@ -203,7 +205,8 @@ def write_results_to_sheet(spreadsheet_id, sheet_name, results, creds_file):
             row.get("category_reason", ""),
             row.get("significance_score", ""),
             row.get("relevant", ""),
-            row.get("human_priority", "")
+            row.get("human_priority", ""),
+            row.get("input_type", "")
         ])
 
     if not values:

@@ -29,6 +29,7 @@ HEADERS = [
     "source_url",
     "publication_date",
     "human_priority",
+    "input_type",
 ]
 
 RSS_FEEDS = [
@@ -163,7 +164,8 @@ def append_stories_to_sheet(spreadsheet_id, sheet_name, stories, creds_file):
             s["context_snippet"],
             s.get("source_url", ""),
             s.get("publication_date", ""),
-            s.get("human_priority", 0)
+            s.get("human_priority", 0),
+            s.get("input_type", "")
         ])
 
     if not values:
@@ -266,7 +268,8 @@ def run_headscanner(max_stories):
             "context_snippet": snippet,
             "source_url": candidates[i]["source"],
             "publication_date": candidates[i]["publication_date"],
-            "human_priority": 0
+            "human_priority": 0,
+            "input_type": "RSS"
         })
         print(f"✅ Added: {headlines[i][:60]}...")
         next_id += 1
