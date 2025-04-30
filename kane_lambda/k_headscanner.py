@@ -274,7 +274,7 @@ def run_headscanner(max_stories):
 
     if not candidates:
         print("✅ No new recent stories found.")
-        sys.exit(0)
+        return
 
     # 📌 Step 4: Prepare inputs for LLM
     summaries = [c["summary"] for c in candidates]

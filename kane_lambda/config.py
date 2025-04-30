@@ -18,10 +18,10 @@ LLM_BACKEND = "gemini"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 # Model name constants for split prioritizer and headscanner
-CATEGORY_MODEL = "google/gemini-2.5-flash-preview:thinking"
-SIGNIFICANCE_MODEL = "google/gemini-2.5-pro-preview-03-25"
-RELEVANCE_MODEL = "google/gemini-2.5-flash-preview:thinking"
-HEADSCANNER_MODEL = "google/gemini-2.5-pro-preview-03-25"
+CATEGORY_MODEL = "gemini-2.5-flash-preview-04-17"
+SIGNIFICANCE_MODEL = "gemini-2.5-pro-preview-03-25"
+RELEVANCE_MODEL = "gemini-2.5-flash-preview-04-17"
+HEADSCANNER_MODEL = "gemini-2.5-pro-preview-03-25"
 
 # Prioritizer settings
 CATEGORIES = [

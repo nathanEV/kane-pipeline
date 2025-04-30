@@ -26,6 +26,10 @@ if [ -d build/python ]; then
   rm -rf build/python
 fi
 
+echo "Removing Pydantic packages (using layer instead)..."
+find build -maxdepth 1 -type d -name "pydantic*" -exec rm -rf {} +
+find build -maxdepth 1 -type d -name "pydantic_core*" -exec rm -rf {} +
+
 # 3) Copy our code & creds
 cp -r ../kane_lambda/* build/kane_lambda/
 cp ../kane_lambda/__init__.py build/kane_lambda/
@@ -34,6 +38,11 @@ cp service_account.json build/
 # 4) Clean up compiled and cache files to slim package
 find build -type d -name '__pycache__' -exec rm -rf {} +
 find build -type f -name '*.pyc' -delete
+
+echo "Pruning googleapiclient discovery cache and timezone data..."
+rm -rf build/googleapiclient/discovery_cache
+rm -rf build/pytz/zoneinfo
+rm -rf build/dateutil/zoneinfo
 
 # 5) Zip it up, excluding caches
 cd build
