@@ -13,7 +13,7 @@ from html import unescape
 import math
 import os
 from kane_lambda.config import HEADSCANNER_MODEL, HEADSCANNER_PROMPT_TEMPLATE, LLM_BACKEND, GEMINI_API_KEY
-from google import genai
+import google.genai as genai
 
 # === CONFIG ===
 API_KEY = os.environ.get("OPENROUTER_API_KEY", "")

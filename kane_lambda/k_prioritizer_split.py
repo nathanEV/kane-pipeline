@@ -7,7 +7,7 @@ from googleapiclient.discovery import build
 from urllib.parse import urlparse
 from dateutil import parser as date_parser
 import pytz
-from google import genai
+import google.genai as genai
 
 from kane_lambda.config import (
     CATEGORY_MODEL,
