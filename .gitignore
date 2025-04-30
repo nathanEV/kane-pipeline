@@ -85,3 +85,7 @@ kane_lambda_package.zip
 # Lambda build artifacts and legacy copies
 /lambda_package/
 /output.json
+
+# Ignore response.json and test_response.json
+/response.json
+/test_response.json
