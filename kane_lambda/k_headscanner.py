@@ -12,11 +12,10 @@ from urllib.parse import urlparse
 from html import unescape
 import math
 import os
+from kane_lambda.config import HEADSCANNER_MODEL, HEADSCANNER_PROMPT_TEMPLATE
 
 # === CONFIG ===
 API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
-
-MODEL = "google/gemini-2.0-flash-001"
 
 SHEET_ID = "11hRH6mnlTGO1qIQUsqkSZawigy1LQlzBPYnJNbpb_RQ"
 INPUT_SHEET_NAME = "headscanner"
@@ -84,31 +83,11 @@ def extract_snippet_author_batch(summaries, headlines, known_authors=None, batch
             for j in range(min(batch_size, len(summaries) - i))
         ]
 
-        prompt = f"""
-You are a structured news assistant.
-
-For each input item, extract:
-- "context_snippet": A short direct quote from the summary (max 30 words) that does not repeat the title.
-- "author": Extract only if has_author is false, else return an empty string.
-
-Return only a JSON array of objects. No commentary, no markdown, no formatting, no headings.
-
-Format:
-[
-  {{
-    "context_snippet": "A direct sentence from summary.",
-    "author": "Author Name"
-  }},
-  ...
-]
-
-INPUT:
-{json.dumps(batch, indent=2)}
-"""
+        prompt = HEADSCANNER_PROMPT_TEMPLATE.replace("{batch}", json.dumps(batch, indent=2))
 
         headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
         payload = {
-            "model": MODEL,
+            "model": HEADSCANNER_MODEL,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.3,
         }

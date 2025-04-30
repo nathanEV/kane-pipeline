@@ -189,17 +189,31 @@ RULES
 ────────────────────────────────────────
 EXAMPLES  
 
-Blurb: "Nvidia posts record Q4 data-centre revenue of $35.6 B (+93 % YoY)."  
-{"category":"Market_Financial_Signals","category_reason":"Earnings move >±10 %"}
+Input blurbs
+	•	Story ID 1
+"Nvidia (NVDA) posts record Q4 data-centre revenue of $35.6 B, up 93 % year-on-year."
+	•	Story ID 2
+"OpenAI COO says users created 700 M images with GPT-4o in just 60 days."
+	•	Story ID 3
+"Harvard Business School study finds marketers 56 % more productive when using GenAI assistants."
+	•	Story ID 4
+"Humanoid-robot start-up 1X raises a $125 M Series B led by OpenAI, valuing the firm at $1.2 B."
+	•	Story ID 5
+"AWS will build a €15 B data-centre campus in Ireland dedicated to generative-AI workloads."
+	•	Story ID 6
+"European Union formally adopts the AI Act; core rules will take effect in 2026."
 
-Blurb: "OpenAI COO: 700 M images created with GPT-4o in 60 days."  
-{"category":"Product_Research","category_reason":"Usage milestone >100 M"}
+⸻
 
-# OUTPUT example JSON array for batch
-OUTPUT
+Classifier output
+
 [
   {"story_id":"1","category":"Market_Financial_Signals","category_reason":"Earnings move >±10 %"},
-  {"story_id":"2","category":"Product_Research","category_reason":"Usage milestone >100 M"}
+  {"story_id":"2","category":"Product_Research","category_reason":"Usage milestone >100 M"},
+  {"story_id":"3","category":"Market_Financial_Signals","category_reason":"Research quantifies productivity impact"},
+  {"story_id":"4","category":"Capital_Corporate_Moves","category_reason":"Funding ≥$100 M"},
+  {"story_id":"5","category":"Infrastructure_Supply","category_reason":"AI-specific DC build-out"},
+  {"story_id":"6","category":"Policy_Geopolitics","category_reason":"Law enacted"}
 ]
 NOW PROCESS THIS BATCH. RETURN NOTHING BUT THE JSON LIST.
 
@@ -249,7 +263,7 @@ Scoring Framework
 
 Adjustment Rules  
 1. Concentration of Impact  
-   If the story directly involves any of these tickers—MSFT, GOOGL, AAPL, AMZN, NVDA, META, TSLA, TSM, INTC, AMD—add **+1** unless clearly trivial.
+   If the story directly involves any of the major AI labs (OpenAI, Google, Meta, Anthropic, etc.) or any of these tickers—MSFT, GOOGL, AAPL, AMZN, NVDA, META, TSLA, TSM, INTC, AMD—add **+1** unless clearly trivial.
 
 2. Novelty & Momentum  
    Down-rate incremental follow-ups unless fresh metrics or milestones show ≥ 10 % change or a materially new angle.
@@ -259,15 +273,97 @@ Return ONLY a JSON list of objects with keys "story_id" and "significance_score"
 
 EXAMPLES
 
-Input Blurb:  
-"OpenAI unveils GPT-5, outperforming GPT-4o by 40 % on MMLU and reducing inference cost 3×."  
-Output:  
-[{"story_id":"1","significance_score":10}]
+Input Blurb
+Story ID = 301
+"OpenAI introduces GPT-6, outperforming GPT-5 by 45 % on MMLU, cutting inference cost four-fold, handling 128-k context windows, and shipping to Azure clients next month under priority access tiers."
 
-Input Blurb:  
-"Nvidia (NVDA) buys photonics start-up Ayar Labs for $2.9 B to integrate optical I/O in next-gen GPUs."  
-Output:  
-[{"story_id":"2","significance_score":8}]
+Output
+
+[{"story_id":"301","significance_score":10}]
+
+
+
+⸻
+
+Input Blurb
+Story ID = 302
+"Microsoft (MSFT) commits $15 billion for a 3 GW small-modular-reactor-powered data-centre campus in Wyoming, doubling Azure AI compute capacity and promising 24/7 zero-carbon electricity by 2028."
+
+Output
+
+[{"story_id":"302","significance_score":9}]
+
+
+
+⸻
+
+Input Blurb
+Story ID = 303
+"Independent researchers show GPT-4o consistently tailors politically sensitive answers to align with perceived user stance, scoring 0.85 probability in bias tests, raising concerns about unintended 'sycophantic' moderation behaviour."
+
+Output
+
+[{"story_id":"303","significance_score":8}]
+
+
+
+⸻
+
+Input Blurb
+Story ID = 304
+"Duolingo (DUOL) will phase out 5 % of freelance translators, redirecting $18 million annually toward GPT-4o content generation, as the language-learning platform declares itself 'AI-first', says CEO."
+
+Output
+
+[{"story_id":"304","significance_score":7}]
+
+
+
+⸻
+
+Input Blurb
+Story ID = 305
+"Spotify (SPOT) reports Q2 paying subscribers up 11 % YoY to 305 million; executives credit AI DJ playlists for boosting retention and outline expanded monetisation trials later this year."
+
+Output
+
+[{"story_id":"305","significance_score":6}]
+
+
+
+⸻
+
+Input Blurb
+Story ID = 306
+"Snowflake adds native vector search and embedding functions, matching Databricks while keeping current pricing; analysts estimate the feature could unlock an incremental $150 million in annual upsell revenue."
+
+Output
+
+[{"story_id":"306","significance_score":5}]
+
+
+
+⸻
+
+Input Blurb
+Story ID = 307
+"Brazilian startup PetNutri raises $18 million Series A to develop GPT-powered personalised dog-food plans, targeting 100 thousand Latin-American subscribers by 2027 amid a growing pet-wellness market."
+
+Output
+
+[{"story_id":"307","significance_score":3}]
+
+
+
+⸻
+
+Input Blurb
+Story ID = 308
+"Android 16.1 introduces an optional AI-generated wallpaper feature that restyles photos; Google says it's free, initially limited to Pixel 8, with user-feedback surveys guiding broader rollout."
+
+Output
+
+[{"story_id":"308","significance_score":2}]
 
 # OUTPUT example JSON array for batch
 OUTPUT
@@ -320,4 +416,41 @@ OUTPUT
 NOW PROCESS THIS BATCH. RETURN NOTHING BUT THE JSON LIST.
 
 BLURBS: {story_batch}
+"""
+
+# Headscanner settings
+HEADSCANNER_MODEL = "gemini-2.5-pro-preview-03-25"  # model for headscanner
+HEADSCANNER_PROMPT_TEMPLATE = """
+You are a structured news assistant.
+
+For each input item, extract:
+- "context_snippet": A short sentence that encapsulates the context of the news item.
+- "author": Extract only if has_author is false, else return an empty string.
+
+Return only a JSON array of objects. No commentary, no markdown, no formatting, no headings.
+
+Here are some examples of what the context_snippet should look like:
+[
+    {
+        "context_snippet": "Global startup funding surged to $113B in Q1, up 54% YoY, with AI dominating 77% of US deal value, demonstrating robust AI investment momentum.",
+        "author": "Emily Carter"
+    },
+    {
+        "context_snippet": "China's low-altitude economy is projected to reach $207B in 2025, with two Chinese companies receiving regulatory approval to launch autonomous passenger drones (flying taxis).",
+        "author": "Liang Zhou"
+    }
+    # ... add more examples as needed ...
+]
+
+Format:
+[
+    {
+        "context_snippet": "A direct sentence from summary.",
+        "author": "Author Name"
+    },
+    ...
+]
+
+INPUT:
+{batch}
 """
