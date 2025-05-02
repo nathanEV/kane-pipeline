@@ -31,36 +31,16 @@ HEADERS = [
     "publication_date",
     "human_priority",
     "input_type",
+    "raw_summary",
 ]
 
 RSS_FEEDS = [
-    ("https://www.techmeme.com/feed.xml", "Techmeme River"),
-    ("https://rss.app/feeds/4uZTg1jssusYbBdz.xml", "Techmeme Semiconductor"),
-    ("https://rss.app/feeds/unnX4o3PFEpblbx4.xml", "Techmeme AI"),
-    ("https://rss.app/feeds/HLekB8mvrvIxQ4pS.xml", "Techmeme DataCent"),
-    ("https://rss.app/feeds/H4qnuCkcvceXwJBE.xml", "Techmeme OpenAI/Lambda/Google"),
-    ("https://rss.app/feeds/e3y2n9NIz8By1H4h.xml", "Techmeme Apple/Amazon/Anthropic"),
-    ("https://rss.app/feeds/tWJEPf9NQjIJXENk.xml", "Techmeme Alibaba/Deepseek/Tencent/China"),
-    ("https://www.techinasia.com/feed", "Tech in Asia"),
-    ("https://www.scmp.com/rss/91/feed", "SCMP Technology"),
-    ("https://www.datacenterdynamics.com/en/rss/", "DatacenterDynamics"),
-    ("https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml", "NYT Technology"),
-    ("https://digital-strategy.ec.europa.eu/en/rss.xml", "EU Digital Strategy"),
-    ("https://www.artificialintelligence-news.com/feed/", "Artificial Intelligence News"),
-    ("https://epochai.org/atom.xml", "Epoch AI Blog"),
-    ("https://deepmind.google/blog/rss.xml", "Google DeepMind Blog"),
-    ("https://www.techdirt.com/feed/", "Techdirt"),
-    ("https://about.bnef.com/blog/feed/", "BloombergNEF Blog"),
-    ("https://feeds.bloomberg.com/technology/news.rss", "Bloomberg Technology"),
-    ("https://www.politico.eu/section/competition/feed/", "POLITICO Competition"),
-    ("https://www.politico.eu/section/technology/feed/", "POLITICO Technology"),
-    ("https://www.politico.eu/section/cybersecurity/feed/", "POLITICO Cybersecurity"),
-    ("https://tech.eu/feed/", "Tech.eu"),
-    ("https://www.politico.eu/section/energy/feed/", "POLITICO Energy"),
-    ("https://www.aei.org/feed/", "American Enterprise Institute"),
-    ("https://www.bruegel.org/rss.xml", "Bruegel"),
-    ("https://cepr.net/feed/", "Center for Economic & Policy Research"),
-    ("https://www.hpcwire.com/feed/", "HPCwire"),
+    ("https://www.inoreader.com/stream/user/1003813960/tag/Asia", "Asian"),
+    ("https://www.inoreader.com/stream/user/1003813960/tag/General%20AI%20sources", "General AI"),
+    ("https://www.inoreader.com/stream/user/1003813960/tag/General%20tech", "General tech"),
+    ("https://www.inoreader.com/stream/user/1003813960/tag/MSM", "MSM"),
+    ("https://www.inoreader.com/stream/user/1003813960/tag/Startups", "Startups"),
+    ("https://www.inoreader.com/stream/user/1003813960/tag/Techmeme%20%26%20niche", "Techmeme head"),
 ]
 # === HELPERS ===
 
@@ -198,7 +178,8 @@ def append_stories_to_sheet(spreadsheet_id, sheet_name, stories, creds_file):
             s.get("source_url", ""),
             s.get("publication_date", ""),
             s.get("human_priority", 0),
-            s.get("input_type", "")
+            s.get("input_type", ""),
+            s.get("raw_summary", "")
         ])
 
     if not values:
@@ -254,7 +235,8 @@ def discover_articles_from_rss(feeds, existing_sources, cutoff, max_stories):
                 "summary": summary,
                 "source": real_url,
                 "publication_date": format_date(pub_time),
-                "author": author
+                "author": author,
+                "input_type": label
             })
 
     print(f"✅ Found {len(candidates)} new articles within cutoff.")
@@ -299,10 +281,11 @@ def run_headscanner(max_stories):
             "author": final_author,
             "headline": headlines[i],
             "context_snippet": snippet,
+            "raw_summary": candidates[i]["summary"],
             "source_url": candidates[i]["source"],
             "publication_date": candidates[i]["publication_date"],
             "human_priority": 0,
-            "input_type": "RSS"
+            "input_type": candidates[i]["input_type"]
         })
         print(f"✅ Added: {headlines[i][:60]}...")
         next_id += 1

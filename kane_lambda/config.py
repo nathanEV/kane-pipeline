@@ -431,7 +431,7 @@ HEADSCANNER_PROMPT_TEMPLATE = """
 You are a structured news assistant.
 
         For each input item, extract:
-        - "context_snippet": A short sentence that encapsulates the context of the news item.
+        - "context_snippet": A short sentence that encapsulates the context of the news item. All relevant entities should be included and named in the sentence. The reader should be able to have a nice kurt takeaway of what happened.
         - "author": Extract only if has_author is false, else return an empty string.
 
         Return only a JSON array of objects. No commentary, no markdown, no formatting, no headings.
