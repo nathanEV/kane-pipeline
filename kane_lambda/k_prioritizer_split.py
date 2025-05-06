@@ -47,20 +47,26 @@ def read_stories_from_sheet(spreadsheet_id, sheet_name, creds_file):
     rows = values[1:]
 
     story_batch = []
-    for row in rows:
-        story = dict(zip(headers, row))
-        # Normalize input_type from possible header variants
-        raw_input_type = (story.get("input_type") or story.get("input type") or story.get("Input Type") or story.get("inputType") or "")
-        story_batch.append({
-            "story_id": story.get("story_id", ""),
-            "author": story.get("author", ""),
-            "headline": story.get("headline", ""),
-            "context_snippet": story.get("context_snippet", ""),
-            "source_url": story.get("source_url", ""),
-            "publication_date": story.get("publication_date", ""),
-            "human_priority": int(story.get("human_priority", "0") or 0),
-            "input_type": raw_input_type
-        })
+    for idx, row in enumerate(rows, start=2):
+        try:
+            story = dict(zip(headers, row))
+            # Normalize input_type from possible header variants
+            raw_input_type = (story.get("input_type") or story.get("input type") or story.get("Input Type") or story.get("inputType") or "")
+            human_priority_str = story.get("human_priority", "0") or "0"
+            human_priority = int(human_priority_str)
+            story_batch.append({
+                "story_id": story.get("story_id", ""),
+                "author": story.get("author", ""),
+                "headline": story.get("headline", ""),
+                "context_snippet": story.get("context_snippet", ""),
+                "source_url": story.get("source_url", ""),
+                "publication_date": story.get("publication_date", ""),
+                "human_priority": human_priority,
+                "input_type": raw_input_type
+            })
+        except Exception as e:
+            print(f"⚠️ Skipping invalid row {idx} in sheet '{sheet_name}': {row}. Error: {e}")
+            continue
     return story_batch
 
 def get_processed_story_ids(spreadsheet_id, sheet_name, creds_file):
@@ -72,7 +78,15 @@ def get_processed_story_ids(spreadsheet_id, sheet_name, creds_file):
     range_str = f"{sheet_name}!A2:A"
     result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range_str).execute()
     values = result.get('values', [])
-    return {row[0] for row in values if row}
+    processed_ids = set()
+    for idx, row in enumerate(values, start=2):
+        try:
+            if row:
+                processed_ids.add(row[0])
+        except Exception as e:
+            print(f"⚠️ Skipping invalid ID row {idx} in sheet '{sheet_name}': {row}. Error: {e}")
+            continue
+    return processed_ids
 
 def call_llm(prompt, model):
     if LLM_BACKEND == "openrouter":

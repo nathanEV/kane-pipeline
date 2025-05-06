@@ -49,4 +49,10 @@ cd build
 zip -r9 ../kane_lambda_package.zip . -x "*__pycache__*" "*.pyc"
 cd ..
 
-echo "✅ Built lambda_package/kane_lambda_package.zip" 
+echo "✅ Built lambda_package/kane_lambda_package.zip"
+echo "📤 Uploading package to S3 bucket: kane-pipeline-deployment"
+aws s3 cp kane_lambda_package.zip s3://kane-pipeline-deployment/kane_lambda_package.zip
+echo "🚀 Updating AWS Lambda function 'kane-pipeline' via S3"
+aws lambda update-function-code --function-name kane-pipeline \
+    --s3-bucket kane-pipeline-deployment \
+    --s3-key kane_lambda_package.zip 
